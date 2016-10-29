@@ -10,13 +10,16 @@
 #define _ESP8266_SPI_H_
 
 
-
 #include "ESP8266_SPI.h"
 #include "spi_register.h"
 #include "user_interface.h"
 #include <ets_sys.h>
 #include "gpio.h"
 #include "spi.h"
+
+#define spi_busy(spi_no) READ_PERI_REG(SPI_CMD(spi_no))&SPI_USR
+#define ESP8266_SPI_CS_LOW GPIO_OUTPUT_SET(4, 0)
+#define ESP8266_SPI_CS_HIGH GPIO_OUTPUT_SET(4, 1)
 
 void ESP8266_SPI_init_pins(void);
 void ESP8266_SPI_set_params(void);

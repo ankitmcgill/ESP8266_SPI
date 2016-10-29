@@ -8,13 +8,6 @@
 * ANKIT.BHATNAGARINDIA@GMAIL.COM
 * ***********************************************/
 
-#define ESP8266_SPI_MOSI_HIGH GPIO_OUTPUT_SET(13, 1)
-#define ESP8266_SPI_MOSI_LOW GPIO_OUTPUT_SET(13, 0)
-#define ESP8266_SPI_SCLK_HIGH GPIO_OUTPUT_SET(14, 1)
-#define ESP8266_SPI_SCLK_LOW GPIO_OUTPUT_SET(14, 0)
-#define ESP8266_SPI_CS_HIGH GPIO_OUTPUT_SET(4, 1)
-#define ESP8266_SPI_CS_LOW GPIO_OUTPUT_SET(4, 0)
-
 #include "ESP8266_SPI.h"
 
 void ESP8266_SPI_init_pins(void)
@@ -48,17 +41,19 @@ void ESP8266_SPI_send(uint8_t address, uint8_t data)
 	//SEND THE DATA IN FORMAT ADDRESS(8) ... DATA(8)
 	//MSB ... LSB
 
+	ESP8266_SPI_SCLK_LOW;
+	ESP8266_SPI_MOSI_LOW;
 	ESP8266_SPI_CS_LOW;
 
 	uint8_t mask = 1 << 7;
 
 	while(mask != 0)
 	{
-		ESP8266_SPI_SCLK_HIGH;
 		if(mask & address)
 		{
 			ESP8266_SPI_MOSI_HIGH;
 		}
+		ESP8266_SPI_SCLK_HIGH;
 		ESP8266_SPI_SCLK_LOW;
 		mask = mask >> 1;
 		ESP8266_SPI_MOSI_LOW;
@@ -67,11 +62,11 @@ void ESP8266_SPI_send(uint8_t address, uint8_t data)
 	mask = 1 << 7;
 	while(mask != 0)
 	{
-		ESP8266_SPI_SCLK_HIGH;
 		if(mask & data)
 		{
 			ESP8266_SPI_MOSI_HIGH;
 		}
+		ESP8266_SPI_SCLK_HIGH;
 		ESP8266_SPI_SCLK_LOW;
 		mask = mask >> 1;
 		ESP8266_SPI_MOSI_LOW;

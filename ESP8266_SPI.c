@@ -1,7 +1,5 @@
 /*************************************************
 * ESP8266 HARDWARE SPI (HSPI) LIBRARY
-* NOT USING HARDWARE HSPI
-* BIT BANGING
 *
 * OCTOBER 26 2016
 * ANKIT BHATNAGAR
@@ -13,68 +11,6 @@
 
 void ESP8266_SPI_init_pins(void)
 {
-<<<<<<< HEAD
-	//INITIALIZE THE GPIO PINS USED FOR SPI
-	//GPIO12 - MISO :IN
-	//GPIO13 - MOSI : OUT
-	//GPIO14 - SCLK : OUT
-	//GPIO15 - CS : OUT
-
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, FUNC_GPIO12);
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, FUNC_GPIO13);
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U, FUNC_GPIO14);
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO4_U, FUNC_GPIO4);
-
-	//SET INITIAL LINE STATES
-	ESP8266_SPI_CS_HIGH;
-	ESP8266_SPI_MOSI_LOW;
-	ESP8266_SPI_SCLK_LOW;
-}
-
-void ESP8266_SPI_set_params(void)
-{
-
-
-
-}
-
-void ESP8266_SPI_send(uint8_t address, uint8_t data)
-{
-	//SEND THE DATA IN FORMAT ADDRESS(8) ... DATA(8)
-	//MSB ... LSB
-
-	ESP8266_SPI_SCLK_LOW;
-	ESP8266_SPI_MOSI_LOW;
-	ESP8266_SPI_CS_LOW;
-
-	uint8_t mask = 1 << 7;
-
-	while(mask != 0)
-	{
-		if(mask & address)
-		{
-			ESP8266_SPI_MOSI_HIGH;
-		}
-		ESP8266_SPI_SCLK_HIGH;
-		ESP8266_SPI_SCLK_LOW;
-		mask = mask >> 1;
-		ESP8266_SPI_MOSI_LOW;
-	}
-
-	mask = 1 << 7;
-	while(mask != 0)
-	{
-		if(mask & data)
-		{
-			ESP8266_SPI_MOSI_HIGH;
-		}
-		ESP8266_SPI_SCLK_HIGH;
-		ESP8266_SPI_SCLK_LOW;
-		mask = mask >> 1;
-		ESP8266_SPI_MOSI_LOW;
-	}
-
-=======
 
 	//INITIALIZE THE GPIO PINS USED FOR SPI
 	//GPIO12 - MTDI - HSPI MISO
@@ -157,17 +93,10 @@ void ESP8266_SPI_send(uint8_t addr_len, uint8_t data_len, uint32_t address, uint
 	SET_PERI_REG_MASK(SPI_CMD(HSPI), SPI_USR);
 	//WAIT FOR HSPI TO END BEFORE BRINGING CS HIGH
 	while(spi_busy(HSPI));
->>>>>>> hardware_spi_implementation
 	ESP8266_SPI_CS_HIGH;
 }
 
 void ESP8266_SPI_get(uint8_t* data)
 {
 
-<<<<<<< HEAD
-
 }
-=======
-}
-
->>>>>>> hardware_spi_implementation

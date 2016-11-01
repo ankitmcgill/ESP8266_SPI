@@ -1,5 +1,8 @@
 /*************************************************
 * ESP8266 HARDWARE SPI (HSPI) LIBRARY
+* SUPPORTS ONLY SPI MASTER MODE
+* (WRITING SPI DATA TO SLAVE)
+* NO READING / MISO SUPPORT
 *
 * OCTOBER 26 2016
 * ANKIT BHATNAGAR
@@ -19,8 +22,6 @@
 
 
 #define spi_busy(spi_no) READ_PERI_REG(SPI_CMD(spi_no))&SPI_USR
-#define ESP8266_SPI_CS_LOW GPIO_OUTPUT_SET(4, 0)
-#define ESP8266_SPI_CS_HIGH GPIO_OUTPUT_SET(4, 1)
 
 void ESP8266_SPI_init_pins(void);
 void ESP8266_SPI_set_params(uint8_t addr_len, uint8_t data_len);

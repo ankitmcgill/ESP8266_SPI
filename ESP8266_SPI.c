@@ -26,7 +26,7 @@ void ESP8266_SPI_init_pins(void)
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, 2);
 }
 
-void ESP8266_SPI_set_params(uint8_t addr_len, uint8_t data_len)
+void ESP8266_SPI_set_params(uint8_t addr_len, uint8_t data_len, uint16_t clk_pre, uint16_t clk_cnt, uint16_t clk_h, uint16_t clk_l)
 {
 	//SET SPI1 (HSPI) PARAMETERS
 	//CPOL = CPHA = 0
@@ -47,10 +47,10 @@ void ESP8266_SPI_set_params(uint8_t addr_len, uint8_t data_len)
 	//SET SPI CLOCK
 	uint16_t prediv = 9;
 	uint8_t cntdiv = 3;
-	WRITE_PERI_REG(SPI_CLOCK(HSPI), (((prediv-1)&SPI_CLKDIV_PRE)<<SPI_CLKDIV_PRE_S)|
-									(((cntdiv-1)&SPI_CLKCNT_N)<<SPI_CLKCNT_N_S)|
-									(((cntdiv>>1)&SPI_CLKCNT_H)<<SPI_CLKCNT_H_S)|
-									((0&SPI_CLKCNT_L)<<SPI_CLKCNT_L_S));
+	WRITE_PERI_REG(SPI_CLOCK(HSPI), (((clk_pre-1)&SPI_CLKDIV_PRE)<<SPI_CLKDIV_PRE_S)|
+									(((clk_cnt-1)&SPI_CLKCNT_N)<<SPI_CLKCNT_N_S)|
+									(((clk_h>>1)&SPI_CLKCNT_H)<<SPI_CLKCNT_H_S)|
+									(((clk_l)&SPI_CLKCNT_L)<<SPI_CLKCNT_L_S));
 
 	//SET DATA ORDER (MSB FIRST)
 	SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_WR_BYTE_ORDER);

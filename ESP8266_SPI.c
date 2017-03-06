@@ -1,13 +1,23 @@
-/*************************************************
+/*************************************************************************
 * ESP8266 HARDWARE SPI (HSPI) LIBRARY
 * SUPPORTS ONLY SPI MASTER MODE
 * (WRITING SPI DATA TO SLAVE)
 * NO READING / MISO SUPPORT
 *
+* DOES NOT SUPPORT ESP8266 SPI COMMAND BITS. ONLY SENDS DATA AND ADDRESS
+* THROUGH SPI BITS
+*
 * OCTOBER 26 2016
 * ANKIT BHATNAGAR
 * ANKIT.BHATNAGARINDIA@GMAIL.COM
-* ***********************************************/
+*
+* REFERENCES
+* 	- SPI REGISTERS EXPLAINED : http://www.esp8266.com/viewtopic.php?f=13&t=2367
+* 	- http://www.esp8266.com/viewtopic.php?f=13&t=2413
+* 	- NEIL KOLBAN ESP8266 BOOK : SPI CHAPTER : PAGE 135
+* 	- https://github.com/MetalPhreak/ESP8266_SPI_Driver
+* ***********************************************************************/
+
 
 
 #include "ESP8266_SPI.h"
@@ -16,9 +26,9 @@ void ESP8266_SPI_init_pins(void)
 {
 
 	//INITIALIZE THE GPIO PINS USED FOR SPI
-	//GPIO13 - MTCK - HSPI MOSI
-	//GPIO14 - MTMS - HSPI CLK
-	//GPIO15 - MTDO - HSPI CS
+	//GPIO13 - MTCK - HSPI MOSI : OUT
+	//GPIO14 - MTMS - HSPI CLK : OUT
+	//GPIO15 - MTDO - HSPI CS : OUT
 
 	WRITE_PERI_REG(PERIPHS_IO_MUX, 0x105); //Set bit 9 if 80MHz sysclock required
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, 2);
@@ -26,39 +36,64 @@ void ESP8266_SPI_init_pins(void)
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, 2);
 }
 
-void ESP8266_SPI_set_params(uint8_t addr_len, uint8_t data_len, uint16_t clk_pre, uint16_t clk_cnt, uint16_t clk_h, uint16_t clk_l)
+void ESP8266_SPI_set_params(uint8_t data_packet_len, uint16_t addr_packet_len, uint16_t clk_pre, uint16_t clk_cnt, uint16_t clk_h, uint16_t clk_l, uint8_t data_order)
 {
 	//SET SPI1 (HSPI) PARAMETERS
-	//CPOL = CPHA = 0
-	//MSB FIRST
+	//CLOCK POLARITY(CPOL) = FIXED = 0
+	//CLOCK PHASE(CPHA) = FIXED = 0
 	//CONFIGURABLE COMMAND , ADDRESS & DATA BIT LENGTH
+	//ARGUMENTS
+	//	clk_pre : HSPI CLOCK DIVISOR STAGE 1 : HSPI CLOCK = SYSCLK (80MHZ) / (clk_pre + 1) = CLOCK_STAGE1
+	//	clk_cnt : HSPI CLOCK DIVISOR STAGE 2 : NUMBER OF CLOCKS OF CLOCK_STAGE1 THAT MAKE LOCK_STAGE2 : HSPI CLOCK = CLOCK_STAGE1 / (clk_cnt + 1)
+	//	clk_h clk_l	: DIFFERENCE SPECIFIES THE NUMBER OF CLOCK CYCLES (FROM STAGE 2) CLOCK IS HIGH VS LOW (USED TO SHAPE CLOCK)
+	//	IF clk_h > clk_l : (clk_h - clk_l) = NUMBER OF CLOCK CYCLES THAT SPI CLOCK IS HIGH. REMAINING LOW
+	//	IF clk_l > clk_h : (clk_l - clk_h) = NUMBER OF CLOCK CYCLES THAT SPI CLOCK IS LOW. REMAINING HIGH
+	//	data_order : 0 = MSB FIRST, 1 = LSB FIRST
 
 	//disable MOSI, MISO, ADDR, COMMAND, DUMMY in case previously set.
 	CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_USR_MOSI | SPI_USR_MISO | SPI_USR_COMMAND | SPI_USR_ADDR | SPI_USR_DUMMY |SPI_FLASH_MODE);
 
 	//SET GENERAL BEHAVIOR AND DATA FORMAT AND CS LINE BEHAVIOR
-	SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_USR_ADDR | SPI_USR_MOSI | SPI_CS_SETUP | SPI_CS_HOLD);
+	SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_USR_MOSI);
+	if(addr_packet_len != 0)
+	{
+		SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_USR_ADDR);
+	}
 
+	//SET BASIC SPI SETTINGS
+	//SPI_CS_SETUP : BRING DOWN CS LINE FEW CYCLES BEFORE SPI DATA CLOCKED OUT
+	//SPI_CS_HOLD : KEEP CS LOW FEW CYCLES AFTER SPI DATA CLOCKED OUT
+	SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_CS_SETUP | SPI_CS_HOLD);
 
 	//SET CPOL=0 & CPHA=0
 	CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_IDLE_EDGE);
 	CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_CK_OUT_EDGE);
 
 	//SET SPI CLOCK
-	uint16_t prediv = 9;
-	uint8_t cntdiv = 3;
-	WRITE_PERI_REG(SPI_CLOCK(HSPI), (((clk_pre-1)&SPI_CLKDIV_PRE)<<SPI_CLKDIV_PRE_S)|
-									(((clk_cnt-1)&SPI_CLKCNT_N)<<SPI_CLKCNT_N_S)|
-									(((clk_h>>1)&SPI_CLKCNT_H)<<SPI_CLKCNT_H_S)|
+	//REFER TO NEIL KOLBAN ESP8266 BOOK, PAGE 136 FOR CLOCK SETTING EXPLANATION
+	//TO GET SPI CLK = SYSCLK @ 80MHZ : WRITE_PERI_REG(SPI_CLOCK(HSPI), SPI_CLK_EQU_SYSCLK)
+	WRITE_PERI_REG(SPI_CLOCK(HSPI), (((clk_pre)&SPI_CLKDIV_PRE)<<SPI_CLKDIV_PRE_S)|
+									(((clk_cnt)&SPI_CLKCNT_N)<<SPI_CLKCNT_N_S)|
+									(((clk_h)&SPI_CLKCNT_H)<<SPI_CLKCNT_H_S)|
 									(((clk_l)&SPI_CLKCNT_L)<<SPI_CLKCNT_L_S));
 
-	//SET DATA ORDER (MSB FIRST)
-	SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_WR_BYTE_ORDER);
+	//SET DATA ORDER
+	if(data_order == ESP8266_SPI_ORDER_MSB_FIRST)
+	{
+		//MSB FIRST
+		SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_WR_BYTE_ORDER);
+	}
 
 	//SET SPI DATA LENGTHS
-	WRITE_PERI_REG(SPI_USER1(HSPI), (((data_len - 1) & SPI_USR_MOSI_BITLEN) << SPI_USR_MOSI_BITLEN_S) |
-							   (((addr_len - 1) & SPI_USR_ADDR_BITLEN) << SPI_USR_ADDR_BITLEN_S));
-
+	//SUPPORTS MOSI LEN
+	//SIPPORT ADDRESS LENGTH
+	//COMMAND LENGTH = 0
+	//MISO LENGTH = 0
+	WRITE_PERI_REG(SPI_USER1(HSPI), (((data_packet_len - 1) & SPI_USR_MOSI_BITLEN) << SPI_USR_MOSI_BITLEN_S));
+	if(addr_packet_len != 0)
+	{
+		WRITE_PERI_REG(SPI_USER1(HSPI), ((addr_packet_len - 1) & SPI_USR_ADDR_BITLEN) << SPI_USR_ADDR_BITLEN_S);
+	}
 }
 
 void ESP8266_SPI_send(uint8_t addr_len, uint8_t data_len, uint32_t address, uint32_t data)
@@ -66,13 +101,13 @@ void ESP8266_SPI_send(uint8_t addr_len, uint8_t data_len, uint32_t address, uint
 	//SEND SPI DATA OUT
 	//DATA FORMAT : [ADDRESS] - [MOSI DATA]
 
-	while(spi_busy(HSPI)); //wait for SPI to be ready
+	//WAIT FOR SPI TO BE FREE/READY
+	while(spi_busy(HSPI));
 
 	//SETUP + ENABLE ADDRESS
 	//IF ADDRESS LEN != 0
 	if(addr_len)
 	{
-		SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_USR_ADDR);
 		WRITE_PERI_REG(SPI_ADDR(HSPI), address << (32 - addr_len));
 	}
 
@@ -80,19 +115,19 @@ void ESP8266_SPI_send(uint8_t addr_len, uint8_t data_len, uint32_t address, uint
 	//IF MOSI LEN != 0
 	if(data_len)
 	{
-		SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_USR_MOSI);
 		//SINCE SPI DATA REGISTER IS 32 BIT AND DATA WILL GO MSB FIRST
-		//WE NEED TO SHIFT OUR 8 BIT DATA TO MSB SIDE OF W0 REGISTER
+		//WE NEED TO SHIFT OUR DATA TO MSB SIDE OF W0 REGISTER
 		WRITE_PERI_REG(SPI_W0(HSPI), data << (32 - data_len));
 	}
 
 	//NOW FINALLY SEND DATA
 	SET_PERI_REG_MASK(SPI_CMD(HSPI), SPI_USR);
-	//WAIT FOR HSPI TO END BEFORE BRINGING CS HIGH
+
+	//WAIT FOR HSPI TO END
 	while(spi_busy(HSPI));
 }
 
 void ESP8266_SPI_get(uint8_t* data)
 {
-
+	//NOT IMPLEMENTED YET
 }

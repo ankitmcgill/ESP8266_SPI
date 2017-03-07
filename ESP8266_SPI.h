@@ -34,7 +34,7 @@
 
 void ESP8266_SPI_init_pins(void);
 void ESP8266_SPI_set_params(uint8_t data_packet_len, uint16_t addr_packet_len, uint16_t clk_pre, uint16_t clk_cnt, uint16_t clk_h, uint16_t clk_l, uint8_t data_order);
-void ESP8266_SPI_send(uint8_t addr_len, uint8_t data_len, uint32_t address, uint32_t data);
+void ESP8266_SPI_send(uint8_t addr_len, uint8_t data_len, uint32_t address, uint32_t* data);
 void ESP8266_SPI_get(uint8_t* data);
 
 #endif

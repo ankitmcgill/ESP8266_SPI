@@ -96,7 +96,7 @@ void ESP8266_SPI_set_params(uint8_t data_packet_len, uint16_t addr_packet_len, u
 	}
 }
 
-void ESP8266_SPI_send(uint8_t addr_len, uint8_t data_len, uint32_t address, uint32_t data)
+void ESP8266_SPI_send(uint8_t addr_len, uint8_t data_len, uint32_t address, uint32_t*  data)
 {
 	//SEND SPI DATA OUT
 	//DATA FORMAT : [ADDRESS] - [MOSI DATA]
@@ -117,7 +117,20 @@ void ESP8266_SPI_send(uint8_t addr_len, uint8_t data_len, uint32_t address, uint
 	{
 		//SINCE SPI DATA REGISTER IS 32 BIT AND DATA WILL GO MSB FIRST
 		//WE NEED TO SHIFT OUR DATA TO MSB SIDE OF W0 REGISTER
-		WRITE_PERI_REG(SPI_W0(HSPI), data << (32 - data_len));
+		//SPLIT THE DATA IN 32 BITS CHUNKS AND STORE IN SPI DATA
+		//REGISTER SPI_W0 - SPI_W15
+		uint32_t offset = 0x00;
+		while(data_len > 32)
+		{
+			WRITE_PERI_REG(SPI_W0(HSPI) + offset, *data);
+
+			data_len -= 32;
+			data += 1;
+			offset += 0x04;
+		}
+		//WRITE REMAINING DATA (LEN < 32)
+		WRITE_PERI_REG(SPI_W0(HSPI) + offset, *data << (32 - data_len));
+
 	}
 
 	//NOW FINALLY SEND DATA

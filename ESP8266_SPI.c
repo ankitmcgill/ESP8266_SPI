@@ -137,7 +137,7 @@ void ESP8266_SPI_send(uint8_t addr_len, uint8_t data_len, uint32_t address, uint
 	SET_PERI_REG_MASK(SPI_CMD(HSPI), SPI_USR);
 
 	//WAIT FOR HSPI TO END
-	while(spi_busy(HSPI));
+	//while(spi_busy(HSPI));
 }
 
 void ESP8266_SPI_get(uint8_t* data)
